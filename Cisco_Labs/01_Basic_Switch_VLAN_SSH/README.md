@@ -441,4 +441,3 @@ Successful login shows: `SW1>`
 
 ---
 
-*Lab completed as part of Cisco networking studies — Packet Tracer simulation environment.*
