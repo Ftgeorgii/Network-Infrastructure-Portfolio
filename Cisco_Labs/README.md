@@ -2,7 +2,7 @@
 
 Hands-on Cisco IOS labs built in Packet Tracer during network engineering training at Vatanix Technologies, Trichy.
 
-Each lab includes a full README with topology diagram, step-by-step configuration with explanations, verification commands, and the Packet Tracer `.pkt` file.
+Each lab includes a full README with topology diagram, step-by-step configuration with explanations, verification commands, `show running-config` reference, and the Packet Tracer `.pkt` file.
 
 ---
 
@@ -12,10 +12,11 @@ Each lab includes a full README with topology diagram, step-by-step configuratio
 |---|-----|----------------|------|--------|
 | 01 | [Basic Switch Config · VLANs · SSH](01_Basic_Switch_VLAN_SSH/) | Hostname · Enable Secret · Password Encryption · VLANs · SVIs · Telnet · SSH v2 · Port Security | Packet Tracer | ✅ Complete |
 | 02 | [Spanning Tree Protocol](02_Spanning_Tree_Protocol/) | Root Bridge Election · Root/Designated/Alternate Ports · Failover · PortFast · BPDU Guard | Packet Tracer | ✅ Complete |
-| 03 | Inter-VLAN Routing — SVI | Layer-3 Switch · SVI · Trunking · ip routing | Packet Tracer | 🔄 Planned |
-| 04 | Inter-VLAN Routing — Router-on-a-Stick | Subinterfaces · 802.1Q Encapsulation | Packet Tracer | 🔄 Planned |
-| 05 | OSPF Single Area | OSPF Process · DR/BDR Election · `show ip ospf neighbor` | Packet Tracer | 🔄 Planned |
-| 06 | Access Control Lists | Standard ACLs · Extended ACLs · `show access-lists` | Packet Tracer | 🔄 Planned |
+| 03 | [Inter-VLAN Routing — SVI](03_Inter_VLAN_Routing_SVI/) | Layer-3 Switch · SVI · Trunking · ip routing · Multi-switch routing | Packet Tracer | ✅ Complete |
+| 04 | [Inter-VLAN Routing — Router-on-a-Stick](04_Inter_VLAN_Routing_ROS/) | Subinterfaces · 802.1Q Encapsulation · ROAS vs SVI | Packet Tracer | ✅ Complete |
+| 05 | [Static Routing](05_Static_Routing/) | Standard Static Routing · Default Static Routing · Wrong Subnet Mask Troubleshooting | Packet Tracer | 🔄 In Progress |
+| 06 | OSPF Single Area | OSPF Process · DR/BDR Election · `show ip ospf neighbor` | Packet Tracer | 🔄 Planned |
+| 07 | Access Control Lists | Standard ACLs · Extended ACLs · `show access-lists` | Packet Tracer | 🔄 Planned |
 
 ---
 
@@ -39,13 +40,50 @@ Three-switch triangle topology demonstrating automatic loop prevention. Root Bri
 
 ---
 
+## Lab 03 — Inter-VLAN Routing Using SVI
+
+**[→ Full Lab Documentation](03_Inter_VLAN_Routing_SVI/README.md)**
+
+Two Layer-3 switches (MLS1, MLS2) connected via trunk, with MLS1 holding SVIs for all three VLANs and acting as the central routing hub. Includes a troubleshooting scenario for a missing VLAN entry breaking cross-switch routing.
+
+**Key concepts:** SVI (Switched Virtual Interface) · `ip routing` on a Layer-3 switch · trunk-carried VLANs that exist on both switches · centralised vs distributed SVI ownership
+
+---
+
+## Lab 04 — Inter-VLAN Routing Using Router-on-a-Stick
+
+**[→ Full Lab Documentation](04_Inter_VLAN_Routing_ROS/README.md)**
+
+Single router (2911) connected to a Layer-2 switch (2960-24TT) via one trunk link. Three router subinterfaces handle routing for three VLANs using 802.1Q encapsulation.
+
+**Key concepts:** Router subinterfaces · `encapsulation dot1Q` · why the physical interface carries no IP · ROAS vs SVI performance and cost tradeoffs
+
+---
+
+## Lab 05 — Static Routing
+
+**[→ Folder Overview](05_Static_Routing/README.md)**
+
+Covers both standard and default static routing approaches across separate subfolders.
+
+**[01 — Standard Static Routing](05_Static_Routing/01_Standard_Static_Routing/README.md)** ✅ Complete
+Three-router topology with explicit `ip route` entries for every network. Includes a deliberate wrong-subnet-mask fault and the full troubleshooting process — diagnosing a `/30` route that should have been `/24`, isolating the fault to the return path on the destination router, and fixing it live.
+
+**02 — Default Static Routing** 🔄 In Progress
+Single default route (`ip route 0.0.0.0 0.0.0.0`) on a stub/edge router instead of per-network static routes.
+
+**Key concepts:** Static route syntax and next-hop selection · `show ip route` route codes (C, L, S) · tracert hop-by-hop path verification · standard vs default routing tradeoffs
+
+---
+
 ## Lab Format
 
 Each completed lab folder contains:
 
 - `README.md` — objective, topology, device connections, IP addressing, key concepts, step-by-step configuration with explanations, verification commands, troubleshooting scenario, lessons learned
 - `*.pkt` — the Packet Tracer file
-- `screenshots/` — topology diagrams and CLI verification output
+- `screenshots/` — topology diagrams and CLI verification output (running-configs, routing tables, ping/tracert results)
+- `show-running-config-*.html` — full device configuration reference with syntax highlighting (where applicable)
 
 ---
 
@@ -80,10 +118,20 @@ interface FastEthernet0/1
 interface FastEthernet0/5
  switchport mode trunk
 
-# --- SVI — Management IP ---
+# --- SVI — Management / Routing IP ---
 interface vlan 10
  ip address 192.168.10.1 255.255.255.0
  no shutdown
+ip routing                       # Required to route between SVIs
+
+# --- Router-on-a-Stick Subinterface ---
+interface g0/0.10
+ encapsulation dot1Q 10
+ ip address 192.168.10.1 255.255.255.0
+
+# --- Static Routing ---
+ip route [destination-network] [subnet-mask] [next-hop-IP]
+ip route 0.0.0.0 0.0.0.0 [next-hop-IP]    # Default route
 
 # --- SSH Setup ---
 ip domain-name lab.local
