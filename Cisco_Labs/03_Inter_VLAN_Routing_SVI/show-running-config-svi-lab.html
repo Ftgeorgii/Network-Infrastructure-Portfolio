@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>show running-config — Inter-VLAN Routing SVI</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --fg: #1a1916;
+    --muted: #6b6860;
+    --accent: #0e6e4e;
+    --accent-light: #e6f4ef;
+    --border: #e2e0db;
+    --prompt: #0e6e4e;
+    --cmd: #1a1916;
+    --comment: #9c9890;
+    --keyword: #b8470b;
+    --value: #155e8a;
+    --iface: #7b3fa0;
+    font-size: 14px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1rem;
+    line-height: 1.6;
+    padding: 2rem 1.5rem 3rem;
+  }
+
+  header {
+    border-left: 4px solid var(--accent);
+    padding-left: 1rem;
+    margin-bottom: 2rem;
+    animation: fadeSlideDown 0.4s ease both;
+  }
+
+  header .eyebrow {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.3rem;
+  }
+
+  header h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--fg);
+    line-height: 1.2;
+  }
+
+  header .meta {
+    margin-top: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .device-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    animation: fadeSlideUp 0.4s ease both;
+  }
+
+  .device-block:nth-child(2) { animation-delay: 0.08s; }
+  .device-block:nth-child(3) { animation-delay: 0.16s; }
+
+  .device-header {
+    background: var(--fg);
+    color: #fff;
+    padding: 0.65rem 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  .device-badge {
+    background: var(--accent);
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+  }
+
+  .device-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .device-desc {
+    font-size: 0.72rem;
+    color: #9ca3af;
+    margin-left: auto;
+  }
+
+  .terminal {
+    background: #0f1117;
+    padding: 1rem 1.2rem 1.2rem;
+    overflow-x: auto;
+  }
+
+  .prompt-line {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 0.9rem;
+  }
+
+  .prompt-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: #4ade80;
+    white-space: nowrap;
+  }
+
+  .prompt-cmd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: #f9fafb;
+    margin-left: 0.15rem;
+  }
+
+  .cursor {
+    display: inline-block;
+    width: 7px;
+    height: 0.85em;
+    background: #4ade80;
+    vertical-align: middle;
+    margin-left: 2px;
+    animation: blink 1.1s step-end infinite;
+  }
+
+  pre.config-out {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.7;
+    color: #d1d5db;
+    white-space: pre;
+    tab-size: 2;
+  }
+
+  /* Syntax highlighting spans */
+  pre.config-out .kw  { color: #fb923c; }   /* keyword: hostname, ip, interface */
+  pre.config-out .val { color: #67e8f9; }   /* values: IPs, vlan IDs */
+  pre.config-out .ifc { color: #c084fc; }   /* interface names */
+  pre.config-out .cmt { color: #4b5563; }   /* ! separators */
+  pre.config-out .str { color: #86efac; }   /* mode strings: access, trunk */
+
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.5rem 0 1.5rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    animation: fadeSlideUp 0.4s 0.05s ease both;
+  }
+  .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .vlan-table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    animation: fadeSlideUp 0.4s 0.24s ease both;
+  }
+
+  .vlan-table-wrap h3 {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: #fafaf8;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 0.55rem 1rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: #fafaf8;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:nth-child(even) { background: #fafaf8; }
+
+  tbody td {
+    padding: 0.5rem 1rem;
+    color: var(--fg);
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 0.1rem 0.45rem;
+    border-radius: 3px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+  .tag-vlan10 { background: #dbeafe; color: #1d4ed8; }
+  .tag-vlan20 { background: #fce7f3; color: #9d174d; }
+  .tag-vlan30 { background: #d1fae5; color: #065f46; }
+  .tag-trunk  { background: #fef3c7; color: #92400e; }
+
+  footer {
+    margin-top: 2.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    animation: fadeSlideUp 0.4s 0.32s ease both;
+  }
+
+  @keyframes fadeSlideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Cisco Packet Tracer · 3560-24PS</div>
+  <h1>show running-config</h1>
+  <div class="meta">Inter-VLAN Routing — SVI Method &nbsp;|&nbsp; 2 multilayer switches &nbsp;|&nbsp; VLANs 10, 20, 30</div>
+</header>
+
+<!-- VLAN summary table -->
+<div class="section-divider">VLAN &amp; IP Summary</div>
+<div class="vlan-table-wrap">
+  <h3>Subnet &amp; Gateway Reference</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>VLAN</th>
+        <th>Subnet</th>
+        <th>Gateway (SVI)</th>
+        <th>Hosts</th>
+        <th>Switch</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-vlan10">VLAN 10</span></td>
+        <td>192.168.10.0/24</td>
+        <td>192.168.10.1</td>
+        <td>PC0, PC1, PC4, PC5</td>
+        <td>MLS1 (SVI) · MLS2 (L2)</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-vlan20">VLAN 20</span></td>
+        <td>192.168.20.0/24</td>
+        <td>192.168.20.1</td>
+        <td>PC2, PC3</td>
+        <td>MLS1 (SVI)</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-vlan30">VLAN 30</span></td>
+        <td>192.168.30.0/24</td>
+        <td>192.168.30.1</td>
+        <td>PC6</td>
+        <td>MLS1 (SVI) · MLS2 (L2)</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-trunk">TRUNK</span></td>
+        <td colspan="2">dot1q · VLANs 10,20,30</td>
+        <td colspan="2">MLS1 Fa0/5 ↔ MLS2 Fa0/4</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- MLS1 -->
+<div class="section-divider">CLI Output</div>
+
+<div class="device-block">
+  <div class="device-header">
+    <span class="device-badge">3560-24PS</span>
+    <span class="device-name">MLS1#</span>
+    <span class="device-desc">Inter-VLAN routing switch · SVIs for all 3 VLANs</span>
+  </div>
+  <div class="terminal">
+    <div class="prompt-line">
+      <span class="prompt-text">MLS1#</span>
+      <span class="prompt-cmd">show running-config</span>
+      <span class="cursor"></span>
+    </div>
+    <pre class="config-out"><span class="cmt">!</span>
+<span class="kw">version</span> <span class="val">12.2(37)SE1</span>
+<span class="kw">hostname</span> <span class="val">MLS1</span>
+<span class="cmt">!</span>
+<span class="kw">ip routing</span>
+<span class="cmt">!</span>
+<span class="kw">spanning-tree mode</span> <span class="str">pvst</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">FastEthernet0/1</span>
+ <span class="kw">switchport access vlan</span> <span class="val">10</span>
+ <span class="kw">switchport mode</span> <span class="str">access</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">FastEthernet0/2</span>
+ <span class="kw">switchport access vlan</span> <span class="val">10</span>
+ <span class="kw">switchport mode</span> <span class="str">access</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">FastEthernet0/3</span>
+ <span class="kw">switchport access vlan</span> <span class="val">20</span>
+ <span class="kw">switchport mode</span> <span class="str">access</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">FastEthernet0/4</span>
+ <span class="kw">switchport access vlan</span> <span class="val">20</span>
+ <span class="kw">switchport mode</span> <span class="str">access</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">FastEthernet0/5</span>
+ <span class="kw">switchport trunk encapsulation</span> <span class="str">dot1q</span>
+ <span class="kw">switchport trunk allowed vlan</span> <span class="val">10,20,30</span>
+ <span class="kw">switchport mode</span> <span class="str">trunk</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">Vlan1</span>
+ <span class="kw">no ip address</span>
+ <span class="kw">shutdown</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">Vlan10</span>
+ <span class="kw">ip address</span> <span class="val">192.168.10.1 255.255.255.0</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">Vlan20</span>
+ <span class="kw">ip address</span> <span class="val">192.168.20.1 255.255.255.0</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">Vlan30</span>
+ <span class="kw">ip address</span> <span class="val">192.168.30.1 255.255.255.0</span>
+<span class="cmt">!</span>
+<span class="kw">ip classless</span>
+<span class="cmt">!</span>
+<span class="kw">end</span></pre>
+  </div>
+</div>
+
+<!-- MLS2 -->
+<div class="device-block">
+  <div class="device-header">
+    <span class="device-badge">3560-24PS</span>
+    <span class="device-name">MLS2#</span>
+    <span class="device-desc">Access switch · trunk uplink to MLS1</span>
+  </div>
+  <div class="terminal">
+    <div class="prompt-line">
+      <span class="prompt-text">MLS2#</span>
+      <span class="prompt-cmd">show running-config</span>
+      <span class="cursor"></span>
+    </div>
+    <pre class="config-out"><span class="cmt">!</span>
+<span class="kw">version</span> <span class="val">12.2(37)SE1</span>
+<span class="kw">hostname</span> <span class="val">MLS2</span>
+<span class="cmt">!</span>
+<span class="kw">ip routing</span>
+<span class="cmt">!</span>
+<span class="kw">spanning-tree mode</span> <span class="str">pvst</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">FastEthernet0/1</span>
+ <span class="kw">switchport access vlan</span> <span class="val">10</span>
+ <span class="kw">switchport mode</span> <span class="str">access</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">FastEthernet0/2</span>
+ <span class="kw">switchport access vlan</span> <span class="val">10</span>
+ <span class="kw">switchport mode</span> <span class="str">access</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">FastEthernet0/3</span>
+ <span class="kw">switchport access vlan</span> <span class="val">30</span>
+ <span class="kw">switchport mode</span> <span class="str">access</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">FastEthernet0/4</span>
+ <span class="kw">switchport trunk encapsulation</span> <span class="str">dot1q</span>
+ <span class="kw">switchport trunk allowed vlan</span> <span class="val">10,20,30</span>
+ <span class="kw">switchport mode</span> <span class="str">trunk</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">Vlan1</span>
+ <span class="kw">no ip address</span>
+ <span class="kw">shutdown</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">Vlan10</span>
+ <span class="kw">no ip address</span>
+<span class="cmt">!</span>
+<span class="kw">interface</span> <span class="ifc">Vlan30</span>
+ <span class="kw">no ip address</span>
+<span class="cmt">!</span>
+<span class="kw">ip classless</span>
+<span class="cmt">!</span>
+<span class="kw">end</span></pre>
+  </div>
+</div>
+
+<footer>
+  <span>Inter-VLAN Routing — SVI Method</span>
+  <span>Cisco 3560-24PS · IOS 12.2(37)SE1</span>
+</footer>
+
+</body>
+</html>
